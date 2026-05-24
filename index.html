@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Void — Web Proxy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@300;400;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --border: #1e1e2e;
+      --accent: #7c6af7;
+      --accent-dim: #3d3580;
+      --text: #e8e6ff;
+      --muted: #6b6880;
+      --glow: 0 0 40px rgba(124, 106, 247, 0.15);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Sora', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Subtle grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(124,106,247,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(124,106,247,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 680px;
+      display: flex;
+      flex-direction: column;
+      gap: 2.5rem;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+    }
+
+    .logo {
+      font-family: 'Space Mono', monospace;
+      font-size: clamp(2.5rem, 8vw, 5rem);
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      background: linear-gradient(135deg, #fff 0%, #7c6af7 60%, #4f46e5 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+
+    .tagline {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    /* Search bar */
+    .search-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .search-wrap:focus-within {
+      border-color: var(--accent-dim);
+      box-shadow: var(--glow);
+    }
+
+    .search-icon {
+      flex-shrink: 0;
+      padding: 0 10px;
+      color: var(--muted);
+    }
+
+    .search-icon svg {
+      display: block;
+      width: 18px;
+      height: 18px;
+    }
+
+    #url-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.9rem;
+      padding: 12px 0;
+      min-width: 0;
+    }
+
+    #url-input::placeholder {
+      color: var(--muted);
+    }
+
+    .go-btn {
+      flex-shrink: 0;
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 12px 22px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    .go-btn:hover { background: #6a58e0; }
+    .go-btn:active { transform: scale(0.97); }
+
+    /* Quick links */
+    .quick-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .quick-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .quick-link {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 0.8rem;
+      padding: 7px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      font-family: 'Space Mono', monospace;
+    }
+
+    .quick-link:hover {
+      border-color: var(--accent-dim);
+      background: #16162a;
+    }
+
+    /* Status */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 6px #22c55e;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-family: 'Space Mono', monospace;
+      opacity: 0.6;
+    }
+
+    @media (max-width: 480px) {
+      .go-btn { padding: 12px 14px; font-size: 0.75rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">void</div>
+      <p class="tagline">// anonymous web proxy</p>
+    </header>
+
+    <div>
+      <div class="search-wrap">
+        <span class="search-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </span>
+        <input
+          id="url-input"
+          type="text"
+          placeholder="enter a url or search..."
+          autocomplete="off"
+          autocorrect="off"
+          spellcheck="false"
+        />
+        <button class="go-btn" onclick="navigate()">GO →</button>
+      </div>
+    </div>
+
+    <div>
+      <p class="quick-label">// quick access</p>
+      <div class="quick-links">
+        <button class="quick-link" onclick="go('https://google.com')">Google</button>
+        <button class="quick-link" onclick="go('https://youtube.com')">YouTube</button>
+        <button class="quick-link" onclick="go('https://reddit.com')">Reddit</button>
+        <button class="quick-link" onclick="go('https://wikipedia.org')">Wikipedia</button>
+        <button class="quick-link" onclick="go('https://discord.com')">Discord</button>
+        <button class="quick-link" onclick="go('https://github.com')">GitHub</button>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <div class="status-dot"></div>
+      <span>proxy active — all traffic encrypted &amp; anonymized</span>
+    </div>
+
+    <footer>powered by scramjet + node.js</footer>
+  </div>
+
+  <script>
+    const input = document.getElementById('url-input');
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') navigate();
+    });
+
+    function go(url) {
+      input.value = url;
+      navigate();
+    }
+
+    function navigate() {
+      let val = input.value.trim();
+      if (!val) return;
+
+      // If it looks like a search query (no dots or spaces), send to Google
+      if (!val.includes('.') || val.includes(' ')) {
+        val = 'https://www.google.com/search?q=' + encodeURIComponent(val);
+      } else if (!val.startsWith('http://') && !val.startsWith('https://')) {
+        val = 'https://' + val;
+      }
+
+      // Scramjet routes via service worker at /scramjet/
+      window.location.href = '/scramjet/?' + encodeURIComponent(val);
+    }
+  </script>
+</body>
+</html>
